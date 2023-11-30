@@ -17,23 +17,27 @@ class Sprite {
         this.image.src = initial.imageSrc
         this.animations = animations
 
+        this.frames = {
+            current:0,
+            elapsed: 0,
+            max: initial.framesMax,
+            buffer: 10
+        }
+
         this.image.onload = ()=> {
             this.width = this.image.width / initial.framesMax
             this.height = this.image.height;
         }
 
         if(this.animations) {
+            this.frames.buffer = this.initial.frameBuffer
             for (let key in animations) {
                 const image = new Image();
                 image.src = this.animations[key].imageSrc
                 this.animations[key].image = image;
             }
         }
-        this.frames = {
-            current:0,
-            elapsed: 0,
-            max: initial.framesMax
-        }
+
     }
 
     draw() {
@@ -56,7 +60,8 @@ class Sprite {
             return
         }
         this.frames.elapsed++
-        if (this.frames.elapsed % 10 === 0) {
+
+        if (this.frames.elapsed % this.frames.buffer === 0) {
             if (this.frames.current < this.frames.max-1) {
                 this.frames.current++
             } else if (this.loop) {
@@ -66,18 +71,18 @@ class Sprite {
     }
 }
 
-class Background extends Sprite {
-    constructor({initial, animations, speed}) {
+class Movable extends Sprite {
+    constructor({initial, animations, speed, loopX}) {
         super({initial, animations})
-        this.speed = 10
+        this.speed = speed
     }
 
     draw() {
         this.position.x -= this.speed
         c.drawImage(
             this.image,
-            0,
-            0,
+            this.initial.position.x,
+            this.initial.position.y,
             this.width,
             this.height,
             this.position.x,
@@ -96,10 +101,17 @@ class Background extends Sprite {
             this.width,
             this.height,
         )
-        // console.log(this.position.x,this.image.width)
-        if (-this.position.x >= this.image.width) {
-            this.position.x = 0
+
+        if (this.image.width && this.image.width < canvas.width ) {
+            if (-this.position.x >= this.image.width*2) {
+                this.position.x = canvas.width
+            }
+        } else {
+            if (-this.position.x >= this.image.width) {
+                this.position.x = 0
+            }
         }
+
     }
 }
 const keys = {
@@ -153,6 +165,7 @@ class WindSurfer extends Sprite {
         this.image = this.animations[name].image
         this.frames.max = this.animations[name].framesMax
         this.loop = this.animations[name].loop
+        this.frames.buffer = this.animations[name].frameBuffer
     }
 }
 
@@ -165,23 +178,26 @@ const surfer = new WindSurfer({
             x:100,
             y:300
         },
+        frameBuffer: 10
     },
     animations: {
         surfing: {
             imageSrc: './img/surfing.png',
             framesMax: 3,
-            loop: true
+            loop: true,
+            frameBuffer: 10
         },
         jumping: {
             imageSrc: './img/jumping.png',
             framesMax: 10,
-            loop: false
+            loop: false,
+            frameBuffer: 3
         }
     }
 })
 
-const background = new Background({
-    speed: 3,
+const background = new Movable({
+    speed: 5,
     initial: {
         imageSrc: './img/sea.png',
         framesMax: 1,
@@ -191,10 +207,24 @@ const background = new Background({
         },
     }
 })
+const waves = new Array(50).fill(0).map(()=> {
+    return new Movable({
+        speed: 5,
+        initial: {
+            imageSrc: './img/wave.png',
+            framesMax: 1,
+            position: {
+                x:100 + Math.random()*1000,
+                y:50 + Math.random()*1000
+            },
+        }
+    })
+})
 
 function animate() {
     window.requestAnimationFrame(animate)
     background.draw();
+    waves.forEach(wave=> wave.draw());
     surfer.draw();
     surfer.handleInput(keys)
 }
