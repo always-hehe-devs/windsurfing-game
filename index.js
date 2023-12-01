@@ -8,32 +8,32 @@ c.fillStyle = 'white';
 c.fillRect(0, 0, canvas.width, canvas.height);
 
 class Sprite {
-    constructor({initial ,animations}) {
+    constructor({initial, animations}) {
 
-        this.initial = initial
+        this.initial = initial;
         this.position = {...initial.position};
-        this.loop = this.initial.loop
-        this.image = new Image()
-        this.image.src = initial.imageSrc
-        this.animations = animations
+        this.loop = this.initial.loop;
+        this.image = new Image();
+        this.image.src = initial.imageSrc;
+        this.animations = animations;
 
         this.frames = {
-            current:0,
+            current: 0,
             elapsed: 0,
             max: initial.framesMax,
             buffer: 10
-        }
+        };
 
-        this.image.onload = ()=> {
-            this.width = this.image.width / initial.framesMax
+        this.image.onload = () => {
+            this.width = this.image.width / initial.framesMax;
             this.height = this.image.height;
-        }
+        };
 
-        if(this.animations) {
-            this.frames.buffer = this.initial.frameBuffer
+        if (this.animations) {
+            this.frames.buffer = this.initial.frameBuffer;
             for (let key in animations) {
                 const image = new Image();
-                image.src = this.animations[key].imageSrc
+                image.src = this.animations[key].imageSrc;
                 this.animations[key].image = image;
             }
         }
@@ -41,7 +41,6 @@ class Sprite {
     }
 
     draw() {
-        c.fillStyle= 'red'
         c.drawImage(
             this.image,
             this.frames.current * this.width,
@@ -52,68 +51,71 @@ class Sprite {
             this.position.y,
             this.width,
             this.height,
-        )
-        this.updateFrames()
+        );
+        this.updateFrames();
     }
+
     updateFrames() {
         if (this.frames.max === 1) {
-            return
+            return;
         }
-        this.frames.elapsed++
+        this.frames.elapsed++;
 
         if (this.frames.elapsed % this.frames.buffer === 0) {
-            if (this.frames.current < this.frames.max-1) {
-                this.frames.current++
+            if (this.frames.current < this.frames.max - 1) {
+                this.frames.current++;
             } else if (this.loop) {
-                this.frames.current = 0
+                this.frames.current = 0;
             }
         }
     }
 }
 
 class Movable extends Sprite {
-    constructor({initial, animations, speed, loopX}) {
-        super({initial, animations})
-        this.speed = speed
+    constructor({initial, animations, speed}) {
+        super({initial, animations});
+        this.speed = speed;
     }
 
     draw() {
-        this.position.x -= this.speed
+        if (!surfer.crashed) {
+            this.position.x -= this.speed;
+        }
+
         c.drawImage(
             this.image,
-            this.initial.position.x,
-            this.initial.position.y,
+            0, 0,
             this.width,
             this.height,
             this.position.x,
             this.position.y,
             this.width,
             this.height,
-        )
+        );
         c.drawImage(
             this.image,
             0,
             0,
             this.width,
             this.height,
-            this.position.x +this.width,
+            this.width < canvas.width ? this.position.x + canvas.width + this.width * 2 : this.position.x + this.width,
             this.position.y,
             this.width,
             this.height,
-        )
+        );
 
-        if (this.image.width && this.image.width < canvas.width ) {
-            if (-this.position.x >= this.image.width*2) {
-                this.position.x = canvas.width
+        if (this.image.width && this.image.width < canvas.width) {
+            if (-this.position.x >= this.image.width * 2) {
+                this.position.x = canvas.width;
             }
         } else {
             if (-this.position.x >= this.image.width) {
-                this.position.x = 0
+                this.position.x = 0;
             }
         }
-
     }
 }
+
 const keys = {
     w: {
         pressed: false,
@@ -130,34 +132,59 @@ const keys = {
     space: {
         pressed: false,
     },
-}
+};
+
 class WindSurfer extends Sprite {
     constructor({initial, animations}) {
-        super({initial, animations})
+        super({initial, animations});
+        this.image.addEventListener('load', () => {
+            this.collisionBox = {
+                x: this.position.x + 30,
+                y: this.position.y + 60,
+                width: this.width - 45,
+                height: this.height - 80
+            };
+        });
+        this.crashed = false
     }
+
     handleInput(keys) {
+        if (this.image === this.animations['crash'].image) {
+            if (this.frames.current === this.frames.max - 1) {
+                this.crashed = true;
+            }
+            return
+        }
+        if (this.image === this.animations['crash'].image)
+
         if (keys.w.pressed) {
-            this.position.y -=3
+            this.position.y -= 3;
         }
         if (keys.s.pressed) {
-            this.position.y +=3
+            this.position.y += 3;
         }
         if (keys.a.pressed) {
-            this.position.x -=3
+            this.position.x -= 3;
         }
         if (keys.d.pressed) {
-            this.position.x +=3
+            this.position.x += 3;
         }
         if (keys.space.pressed) {
-            this.switchSprite('jumping')
+            this.switchSprite('jumping');
         }
-        // console.log(this.frames.current, this.image)
-        if(this.image !== this.animations['surfing'].image && this.frames.current === this.frames.max-1 && !this.loop) {
-            console.log('asdasd')
-            // this.frames.current = 0
-            this.switchSprite('surfing')
-            // this.image = this.animations['surfing'].image
+        this.collisionBox = {
+            x: this.position.x + 30,
+            y: this.position.y + 70,
+            width: this.width - 45,
+            height: this.height
+        };
+
+        if (this.image !== this.animations['surfing'].image && this.frames.current === this.frames.max - 1 && !this.loop) {
+            this.switchSprite('surfing');
         }
+    }
+    crash() {
+        this.switchSprite('crash')
     }
 
     switchSprite(name) {
@@ -173,10 +200,10 @@ const surfer = new WindSurfer({
     initial: {
         imageSrc: './img/surfing.png',
         framesMax: 3,
-        loop:true,
+        loop: true,
         position: {
-            x:100,
-            y:300
+            x: 0,
+            y: 0
         },
         frameBuffer: 10
     },
@@ -192,9 +219,15 @@ const surfer = new WindSurfer({
             framesMax: 10,
             loop: false,
             frameBuffer: 3
+        },
+        crash: {
+            imageSrc: './img/crash.png',
+            framesMax: 18,
+            loop: false,
+            frameBuffer: 2
         }
     }
-})
+});
 
 const background = new Movable({
     speed: 5,
@@ -206,8 +239,8 @@ const background = new Movable({
             y:0
         },
     }
-})
-const waves = new Array(50).fill(0).map(()=> {
+});
+const waves = new Array(50).fill(0).map(() => {
     return new Movable({
         speed: 5,
         initial: {
@@ -218,57 +251,75 @@ const waves = new Array(50).fill(0).map(()=> {
                 y:50 + Math.random()*1000
             },
         }
-    })
-})
+    });
+});
 
 function animate() {
-    window.requestAnimationFrame(animate)
+    window.requestAnimationFrame(animate);
     background.draw();
-    waves.forEach(wave=> wave.draw());
+    waves.forEach(wave => wave.draw());
     surfer.draw();
-    surfer.handleInput(keys)
+    surfer.handleInput(keys);
+
+    for (let i = 0; i < waves.length; i++) {
+        const wave = waves[i];
+
+        if (surfer.collisionBox) {
+            if (
+                surfer.collisionBox.x >= wave.position.x- surfer.collisionBox.width &&
+                surfer.collisionBox.x + surfer.collisionBox.width <= wave.position.x + wave.width+ surfer.collisionBox.width  &&
+                surfer.collisionBox.y >= wave.position.y &&
+                surfer.collisionBox.y + surfer.collisionBox.height <= wave.position.y + wave.height + surfer.collisionBox.height
+            ) {
+                console.log('asad')
+                surfer.crash()
+            }
+        }
+    }
+
+
 }
 
-animate()
+animate();
 
-window.addEventListener('keydown',(event)=> {
+window.addEventListener('keydown', (event) => {
     switch (event.key) {
         case 'w':
-            keys.w.pressed = true
-            break
+            keys.w.pressed = true;
+            break;
         case 's':
-            keys.s.pressed = true
-            break
+            keys.s.pressed = true;
+            break;
         case 'a':
-            keys.a.pressed = true
-            break
+            keys.a.pressed = true;
+            break;
         case 'd':
-            keys.d.pressed = true
-            break
+            keys.d.pressed = true;
+            break;
         case ' ':
-            keys.space.pressed = true
-            break
+            keys.space.pressed = true;
+            break;
 
     }
-})
+});
 
-window.addEventListener('keyup',(event)=> {
+window.addEventListener('keyup', (event) => {
     switch (event.key) {
         case 'w':
-            keys.w.pressed = false
-            break
+            keys.w.pressed = false;
+            break;
         case 's':
-            keys.s.pressed = false
-            break
+            keys.s.pressed = false;
+            break;
         case 'a':
-            keys.a.pressed = false
-            break
+            keys.a.pressed = false;
+            break;
         case 'd':
-            keys.d.pressed = false
-            break
+            keys.d.pressed = false;
+            break;
         case ' ':
-            keys.space.pressed = false
-            break
+            keys.space.pressed = false;
+            break;
 
     }
-})
+});
